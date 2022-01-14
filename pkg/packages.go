@@ -48,7 +48,7 @@ var (
 // desired version in case by `jb install`ing it.
 //
 // Finally, all unknown files and directories are removed from vendor/
-// The full list of locked depedencies is returned
+// The full list of locked dependencies is returned
 func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.Dependency) (map[string]deps.Dependency, error) {
 	// ensure all required files are in vendor
 	// This is the actual installation
@@ -63,7 +63,13 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 	// find unknown dirs in vendor/
 	names := []string{}
 	err = filepath.Walk(vendorDir, func(path string, i os.FileInfo, err error) error {
+		fmt.Printf("path: %v\n", path)
+		fmt.Printf("vendorDir: %v\n", vendorDir)
+		vendorLocalDir := vendorDir + "/local"
 		if path == vendorDir {
+			return nil
+		}
+		if path == vendorLocalDir {
 			return nil
 		}
 		if !i.IsDir() {
@@ -73,6 +79,8 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 		names = append(names, path)
 		return nil
 	})
+
+	fmt.Printf("names: %v\n", names)
 
 	// remove them
 	for _, dir := range names {
@@ -202,8 +210,14 @@ func checkLegacyNameTaken(legacyName string, pkgName string) (bool, error) {
 func known(deps map[string]deps.Dependency, p string) bool {
 	p = filepath.ToSlash(p)
 	for _, d := range deps {
+		fmt.Printf("d.Name(): %v\n", d.Name())
 		k := filepath.ToSlash(d.Name())
-		if strings.HasPrefix(p, k) || strings.HasPrefix(k, p) {
+		fmt.Printf("p: %v\n", p)
+		fmt.Printf("k: %v\n", k)
+		if strings.HasPrefix(p, k) || strings.HasPrefix(k, p) { // checking for git sources
+			return true
+		}
+		if strings.HasPrefix(p, "local/"+k) { // checking for local sources
 			return true
 		}
 	}
