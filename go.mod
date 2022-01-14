@@ -13,4 +13,5 @@ require (
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/sys v0.0.0-20190310054646-10058d7d4faa // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	github.com/otiai10/copy v1.7.0
 )

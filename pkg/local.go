@@ -25,6 +25,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
 
+	"github.com/otiai10/copy"
+
 	"github.com/jsonnet-bundler/jsonnet-bundler/spec/v1/deps"
 )
 
@@ -38,55 +40,57 @@ func NewLocalPackage(source *deps.Local) Interface {
 	}
 }
 
-func (p *LocalPackage) Install(ctx context.Context, name, dir, version string) (lockVersion string, err error) {
+func (p *LocalPackage) Install(ctx context.Context, dependencyName, dependencyDir, version string) (lockVersion string, err error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get current working directory: %w")
 	}
 
-	fmt.Printf("name: %v\n", name)
-	fmt.Printf("dir: %v\n", dir)
+	fmt.Printf("name: %v\n", p.Source)
+	fmt.Printf("name: %v\n", dependencyName)
+	fmt.Printf("dir: %v\n", dependencyDir)
 	fmt.Printf("version: %v\n", version)
 	fmt.Printf("p.Source.Directory: %v\n", p.Source.Directory)
+	fmt.Printf("p.Source.TargetPath: %v\n", p.Source.TargetPath)
+	fmt.Printf("p.Source.HardCopy: %v\n", p.Source.HardCopy)
 
-	oldname := filepath.Join(wd, p.Source.Directory)
-	newname := filepath.Join(dir, name)
-	linkname, err := filepath.Rel(dir, oldname)
+	pathToLocalSource := filepath.Join(wd, p.Source.Directory)
+	desiredLocationOfImport := filepath.Join(dependencyDir, p.Source.TargetPath, dependencyName)
 
-	fmt.Printf("oldname: %v\n", oldname)
-	fmt.Printf("newname: %v\n", newname)
-	fmt.Printf("linkname: %v\n", linkname)
+	fmt.Printf("pathToLocalSource: %v\n", pathToLocalSource)
+	fmt.Printf("desiredLocationOfImport: %v\n", desiredLocationOfImport)
 
-	localvendordir := filepath.Join(dir, "local", name)
-	fmt.Printf("localvendordir: %v\n", localvendordir)
-
-	if err != nil {
-		linkname = oldname
-	}
-
-	err = os.RemoveAll(localvendordir)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to clean previous destination path: %w")
-	}
-
-	err = CopyDir(p.Source.Directory, localvendordir)
-	if err != nil {
-		return "", errors.Wrap(err, "you fucked up: %w")
-	}
-	// copy in full directory (optional: only jsonnet and libsonnet files) oldname -> dir + 'local'
-	// make symlink from newname -> dir + 'local'
-
-	_, err = os.Stat(oldname)
+	_, err = os.Stat(pathToLocalSource)
 	if os.IsNotExist(err) {
 		return "", errors.Wrap(err, "symlink destination path does not exist: %w")
 	}
 
-	err = os.Symlink(localvendordir, newname)
+	err = os.RemoveAll(desiredLocationOfImport)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create symlink for local dependency: %w")
+		return "", errors.Wrap(err, "failed to clean previous destination path: %w")
 	}
 
-	color.Magenta("LOCAL %s -> %s", name, oldname)
+	// if the user specified for a hard copy
+	if p.Source.HardCopy == true {
+		err := copy.Copy(p.Source.Directory, desiredLocationOfImport)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to copy in local dependency: %w")
+		}
+		color.Magenta("LOCAL COPIED %s -> %s", pathToLocalSource, desiredLocationOfImport)
+	}
+	if p.Source.HardCopy == false {
+		dirOfSymlink, _ := filepath.Split(desiredLocationOfImport)
+		symlink, err := filepath.Rel(dirOfSymlink, pathToLocalSource)
+
+		dir, _ := filepath.Split(desiredLocationOfImport)
+		os.MkdirAll(dir, os.ModePerm)
+
+		err = os.Symlink(symlink, desiredLocationOfImport)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to create symlink for local dependency: %w")
+		}
+		color.Magenta("LOCAL SYMLINK'D %s -> %s", desiredLocationOfImport, symlink)
+	}
 
 	return "", nil
 }

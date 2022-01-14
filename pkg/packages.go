@@ -63,13 +63,9 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 	// find unknown dirs in vendor/
 	names := []string{}
 	err = filepath.Walk(vendorDir, func(path string, i os.FileInfo, err error) error {
-		fmt.Printf("path: %v\n", path)
-		fmt.Printf("vendorDir: %v\n", vendorDir)
-		vendorLocalDir := vendorDir + "/local"
+		// fmt.Printf("path: %v\n", path)
+		// fmt.Printf("vendorDir: %v\n", vendorDir)
 		if path == vendorDir {
-			return nil
-		}
-		if path == vendorLocalDir {
 			return nil
 		}
 		if !i.IsDir() {
@@ -80,7 +76,7 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 		return nil
 	})
 
-	fmt.Printf("names: %v\n", names)
+	// fmt.Printf("names: %v\n", names)
 
 	// remove them
 	for _, dir := range names {
@@ -99,9 +95,9 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 	}
 
 	// remove all symlinks, optionally adding known ones back later if wished
-	if err := cleanLegacySymlinks(vendorDir, locks); err != nil {
-		return nil, err
-	}
+	// if err := cleanLegacySymlinks(vendorDir, locks); err != nil {
+	// 	return nil, err
+	// }
 	if !direct.LegacyImports {
 		return locks, nil
 	}
@@ -207,19 +203,35 @@ func checkLegacyNameTaken(legacyName string, pkgName string) (bool, error) {
 	return true, nil
 }
 
-func known(deps map[string]deps.Dependency, p string) bool {
-	p = filepath.ToSlash(p)
+func known(deps map[string]deps.Dependency, baseOfDirectory string) bool {
+	// fmt.Print("=======================\n")
+	baseOfDirectory = filepath.ToSlash(baseOfDirectory)
 	for _, d := range deps {
-		fmt.Printf("d.Name(): %v\n", d.Name())
+		// fmt.Printf("d.Name(): %v\n", d.Name())
 		k := filepath.ToSlash(d.Name())
-		fmt.Printf("p: %v\n", p)
-		fmt.Printf("k: %v\n", k)
-		if strings.HasPrefix(p, k) || strings.HasPrefix(k, p) { // checking for git sources
+
+		if d.Source.LocalSource != nil && d.Source.LocalSource.TargetPath != "" {
+			if isTargetPathDirectoryKnown(filepath.ToSlash(d.Source.LocalSource.TargetPath), baseOfDirectory) {
+				return true
+			}
+		}
+		// fmt.Printf("p: %v\n", p)
+		// fmt.Printf("k: %v\n", k)
+		if strings.HasPrefix(baseOfDirectory, k) || strings.HasPrefix(k, baseOfDirectory) { // no target path
+			// fmt.Print("known\n")
+			// fmt.Print("=======================\n")
 			return true
 		}
-		if strings.HasPrefix(p, "local/"+k) { // checking for local sources
-			return true
-		}
+
+	}
+	// fmt.Print("not known\n")
+	// fmt.Print("=======================\n")
+	return false
+}
+
+func isTargetPathDirectoryKnown(targetPath string, baseOfDirectory string) bool {
+	if strings.HasPrefix(targetPath, baseOfDirectory) || strings.HasPrefix(baseOfDirectory, targetPath) {
+		return true
 	}
 	return false
 }

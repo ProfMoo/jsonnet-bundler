@@ -84,7 +84,9 @@ func (s Source) LegacyName() string {
 }
 
 type Local struct {
-	Directory string `json:"directory"`
+	Directory  string `json:"directory"`
+	TargetPath string `json:"targetPath,omitempty"`
+	HardCopy   bool   `json:"hardCopy,omitempty"`
 }
 
 func parseLocal(dir, p string) *Dependency {
