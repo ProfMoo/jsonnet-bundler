@@ -95,9 +95,9 @@ func Ensure(direct v1.JsonnetFile, vendorDir string, oldLocks map[string]deps.De
 	}
 
 	// remove all symlinks, optionally adding known ones back later if wished
-	// if err := cleanLegacySymlinks(vendorDir, locks); err != nil {
-	// 	return nil, err
-	// }
+	if err := cleanLegacySymlinks(vendorDir, locks); err != nil {
+		return nil, err
+	}
 	if !direct.LegacyImports {
 		return locks, nil
 	}
