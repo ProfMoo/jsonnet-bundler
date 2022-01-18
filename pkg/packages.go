@@ -204,28 +204,23 @@ func checkLegacyNameTaken(legacyName string, pkgName string) (bool, error) {
 }
 
 func known(deps map[string]deps.Dependency, baseOfDirectory string) bool {
-	// fmt.Print("=======================\n")
 	baseOfDirectory = filepath.ToSlash(baseOfDirectory)
 	for _, d := range deps {
-		// fmt.Printf("d.Name(): %v\n", d.Name())
 		k := filepath.ToSlash(d.Name())
 
+		// checking if the file is in a target path
 		if d.Source.LocalSource != nil && d.Source.LocalSource.TargetPath != "" {
 			if isTargetPathDirectoryKnown(filepath.ToSlash(d.Source.LocalSource.TargetPath), baseOfDirectory) {
 				return true
 			}
 		}
-		// fmt.Printf("p: %v\n", p)
-		// fmt.Printf("k: %v\n", k)
-		if strings.HasPrefix(baseOfDirectory, k) || strings.HasPrefix(k, baseOfDirectory) { // no target path
-			// fmt.Print("known\n")
-			// fmt.Print("=======================\n")
+
+		// checking if the file is in a known 'vendor' location
+		if strings.HasPrefix(baseOfDirectory, k) || strings.HasPrefix(k, baseOfDirectory) {
 			return true
 		}
 
 	}
-	// fmt.Print("not known\n")
-	// fmt.Print("=======================\n")
 	return false
 }
 
